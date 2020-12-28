@@ -16,8 +16,10 @@ public class PuzzleSolver {
     private static final int UNIFORM_COST_SEARCH = 1;
     private static final int A_STAR_MISPLACED_TILE = 2;
     private static final int A_STAR_MANHATTAN = 3;
+    private static final int ITERATIVE_LENGTHENING_SEARCH = 4;
+    private static int costLimit;
 
-    private static PriorityQueue<Node> queue = new PriorityQueue<>(Comparator.comparing(Node::getF));  // Sort queue by f value
+    private static PriorityQueue<Node> frontier = new PriorityQueue<>(Comparator.comparing(Node::getF));  // Sort queue by f value
     private static ArrayList<Node> explored = new ArrayList<>();  // previously explored states
 
     private static int[][] goalState = {{1, 2, 3, 4},
@@ -49,10 +51,10 @@ public class PuzzleSolver {
         long endTime = -1;
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Please select a search algorithm: \n1) Uniform Cost Search \n2) A* Misplaced Tile \n3) A* Manhattan");
+        System.out.println("Please select a search algorithm: \n1) Uniform Cost Search \n2) A* Misplaced Tile \n3) A* Manhattan \n4) Iterative Lengthening Search");
         algorithm = Integer.parseInt(scanner.nextLine());
-        if (algorithm <= 0 || algorithm > 3) {
-            System.err.println("Please enter a correct algorithm: 1-3!");
+        if (algorithm <= 0 || algorithm > 4) {
+            System.err.println("Please enter a correct algorithm: 1-4!");
             exit(1);
         } else {
             startTime = System.currentTimeMillis();
@@ -73,43 +75,87 @@ public class PuzzleSolver {
     }
 
     private int generalSearch(int[][] currPuzzle, int searchFunction) {
-        queue.add(new Node(currPuzzle, 0, 0));
+        frontier.add(new Node(currPuzzle, 0, 0));
         explored.add(new Node(currPuzzle, 0, 0));
         while (true) {
-            if (queue.isEmpty()) return ERROR;
-            ArrayList<Node> children;
-            Node tempState = queue.peek();
-            int[][] tempNode = tempState.getPuzzle();
-            int[][] topNode = new int[currPuzzle.length][];  // clone top of stack
-            for (int i = 0; i < currPuzzle.length; i++)
-                topNode[i] = tempNode[i].clone();
-            Node topState = new Node(topNode, tempState.getG(), tempState.getH());
-            System.out.println("Parent Node : g(n)=" + topState.getG() + "  h(n)=" + topState.getH() + "  f(n)=" + topState.getF() + "\n");
-            printState(topState.getPuzzle());
-            queue.remove();
-            if (stateEqual(topState.getPuzzle(), goalState)) { // successs
-                return FINISHED;
-            } else {  // keep expanding
-                children = getChildren(topState, searchFunction);
-                System.out.println("There is " + children.size() + " children.\n");
-                if (children.size() == 0) {
-                    System.out.println("There is no child, continue.\n");
-                    continue;  // go to next node in queue if topNode has no descendants
-                }
-                nodesExpanded++;
+            if (searchFunction == 4) {
+                if (frontier.isEmpty()) return ERROR;
+                ArrayList<Node> children;
+                Node tempState = frontier.peek();
+                int[][] tempNode = tempState.getPuzzle();
+                int[][] topNode = new int[currPuzzle.length][];  // clone top of stack
+                for (int i = 0; i < currPuzzle.length; i++)
+                    topNode[i] = tempNode[i].clone();
+                Node topState = new Node(topNode, tempState.getG(), tempState.getH());
+                System.out.println("Parent Node : g(n)=" + topState.getG() + "  h(n)=" + topState.getH() + "  f(n)=" + topState.getF() + "\n");
+                printState(topState.getPuzzle());
+                frontier.remove();
+                if (stateEqual(topState.getPuzzle(), goalState)) { // successs
+                    return FINISHED;
+                } else {  // keep expanding
+                    children = getChildren(topState, searchFunction);
+                    System.out.println("There is " + children.size() + " children." + frontier.size() + "\n");
+                    if (children.size() == 0 && frontier.size() != 0) {
+                        System.out.println("There is no child, continue.\n");
+                        continue;  // go to next node in queue if topNode has no descendants
+                    }
+
+                    nodesExpanded++;
 //                System.out.println("Expanding top node in queue...");
-                for (Node child : children) {
-                    if (!containsChild(child)) {  // if unique state
-                        queue.add(child);
-                        explored.add(child);
-                        if (queue.size() > maxQueueSize) maxQueueSize = queue.size();
+                    for (Node child : children) {
+                        if (!containsChild(child)) {  // if unique state
+                            frontier.add(child);
+                            explored.add(child);
+                            if (frontier.size() > maxQueueSize) maxQueueSize = frontier.size();
 //                        System.out.println("Adding following child to queue:");
-                        printState(child.getPuzzle());
+                            printState(child.getPuzzle());
+                        }
+                    }
+                    if (frontier.isEmpty()) {
+                        costLimit++;
+                        explored.clear();
+                        frontier.add(new Node(currPuzzle, 0, 0));
+                        explored.add(new Node(currPuzzle, 0, 0));
+                        nodesExpanded = 0;
+                        maxQueueSize = 0;
+                        continue;
+                    }
+                }
+            } else {
+                if (frontier.isEmpty()) return ERROR;
+                ArrayList<Node> children;
+                Node tempState = frontier.peek();
+                int[][] tempNode = tempState.getPuzzle();
+                int[][] topNode = new int[currPuzzle.length][];  // clone top of stack
+                for (int i = 0; i < currPuzzle.length; i++)
+                    topNode[i] = tempNode[i].clone();
+                Node topState = new Node(topNode, tempState.getG(), tempState.getH());
+                System.out.println("Parent Node : g(n)=" + topState.getG() + "  h(n)=" + topState.getH() + "  f(n)=" + topState.getF() + "\n");
+                printState(topState.getPuzzle());
+                frontier.remove();
+                if (stateEqual(topState.getPuzzle(), goalState)) { // successs
+                    return FINISHED;
+                } else {  // keep expanding
+                    children = getChildren(topState, searchFunction);
+                    System.out.println("There is " + children.size() + " children.\n");
+                    if (children.size() == 0) {
+                        System.out.println("There is no child, continue.\n");
+                        continue;  // go to next node in queue if topNode has no descendants
+                    }
+                    nodesExpanded++;
+//                System.out.println("Expanding top node in queue...");
+                    for (Node child : children) {
+                        if (!containsChild(child)) {  // if unique state
+                            frontier.add(child);
+                            explored.add(child);
+                            if (frontier.size() > maxQueueSize) maxQueueSize = frontier.size();
+//                        System.out.println("Adding following child to queue:");
+                            printState(child.getPuzzle());
+                        }
                     }
                 }
             }
         }
-
     }
 
     /* Gets child nodes, does not handle parent state exception.
@@ -132,6 +178,7 @@ public class PuzzleSolver {
         int h = 0;
         switch (searchFunction) {
             case UNIFORM_COST_SEARCH:
+            case ITERATIVE_LENGTHENING_SEARCH:
                 h = 0;
                 break;
             case A_STAR_MISPLACED_TILE:
@@ -153,97 +200,194 @@ public class PuzzleSolver {
                             }
                     }
                 break;
+//            case ITERATIVE_LENGTHENING_SEARCH:
+//                h = 0;
+//                break;
             default:
                 System.err.println("Error: Entered wrong algorithm!");
                 break;
         }
-        if (zero_loc_x >= 1) {  // Can move up
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y];
-            workingPuzzle[zero_loc_x - 1][zero_loc_y] = temp;
-            retArray.add(new Node(workingPuzzle, g + 1, h));
-        }
-        if (zero_loc_x < PUZZLE_SIZE - 1) {  // Can move down
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+        if (searchFunction == 4) {
+            if (g + 1 <= costLimit) {
+                if (zero_loc_x >= 1) {  // Can move up
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y];
+                    workingPuzzle[zero_loc_x - 1][zero_loc_y] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 1, h));
+                }
+                if (zero_loc_x < PUZZLE_SIZE - 1) {  // Can move down
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y];
-            workingPuzzle[zero_loc_x + 1][zero_loc_y] = temp;
-            retArray.add(new Node(workingPuzzle, g + 1, h));
-        }
-        if (zero_loc_y >= 1) {  // Can move left
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y];
+                    workingPuzzle[zero_loc_x + 1][zero_loc_y] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 1, h));
+                }
+                if (zero_loc_y >= 1) {  // Can move left
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x][zero_loc_y - 1];
-            workingPuzzle[zero_loc_x][zero_loc_y - 1] = temp;
-            retArray.add(new Node(workingPuzzle, g + 1, h));
-        }
-        if (zero_loc_y < PUZZLE_SIZE - 1) {  // Can move right
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x][zero_loc_y - 1];
+                    workingPuzzle[zero_loc_x][zero_loc_y - 1] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 1, h));
+                }
+                if (zero_loc_y < PUZZLE_SIZE - 1) {  // Can move right
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x][zero_loc_y + 1];
-            workingPuzzle[zero_loc_x][zero_loc_y + 1] = temp;
-            retArray.add(new Node(workingPuzzle, g + 1, h));
-        }
-        if (zero_loc_y < PUZZLE_SIZE - 1 && zero_loc_x >= 1) {  // Can move right and up
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x][zero_loc_y + 1];
+                    workingPuzzle[zero_loc_x][zero_loc_y + 1] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 1, h));
+                }
+            } else if (g + 3 < costLimit) {
+                if (zero_loc_y < PUZZLE_SIZE - 1 && zero_loc_x >= 1) {  // Can move right and up
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y + 1];
-            workingPuzzle[zero_loc_x - 1][zero_loc_y + 1] = temp;
-            retArray.add(new Node(workingPuzzle, g + 3, h));
-        }
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y + 1];
+                    workingPuzzle[zero_loc_x - 1][zero_loc_y + 1] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 3, h));
+                }
 
-        if (zero_loc_y < PUZZLE_SIZE - 1 && zero_loc_x < PUZZLE_SIZE - 1) {  // Can move right and down
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+                if (zero_loc_y < PUZZLE_SIZE - 1 && zero_loc_x < PUZZLE_SIZE - 1) {  // Can move right and down
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y + 1];
-            workingPuzzle[zero_loc_x + 1][zero_loc_y + 1] = temp;
-            retArray.add(new Node(workingPuzzle, g + 3, h));
-        }
-        if (zero_loc_y >= 1 && zero_loc_x >= 1) {  // Can move left and up
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y + 1];
+                    workingPuzzle[zero_loc_x + 1][zero_loc_y + 1] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 3, h));
+                }
+                if (zero_loc_y >= 1 && zero_loc_x >= 1) {  // Can move left and up
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y - 1];
-            workingPuzzle[zero_loc_x - 1][zero_loc_y - 1] = temp;
-            retArray.add(new Node(workingPuzzle, g + 3, h));
-        }
-        if (zero_loc_y >= 1 && zero_loc_x < PUZZLE_SIZE - 1) {  // Can move left and down
-            // Clone currPuzzle to workingPuzzle
-            int[][] workingPuzzle = new int[currPuzzle.length][];
-            for (int i = 0; i < currPuzzle.length; i++)
-                workingPuzzle[i] = currPuzzle[i].clone();
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y - 1];
+                    workingPuzzle[zero_loc_x - 1][zero_loc_y - 1] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 3, h));
+                }
+                if (zero_loc_y >= 1 && zero_loc_x < PUZZLE_SIZE - 1) {  // Can move left and down
+                    // Clone currPuzzle to workingPuzzle
+                    int[][] workingPuzzle = new int[currPuzzle.length][];
+                    for (int i = 0; i < currPuzzle.length; i++)
+                        workingPuzzle[i] = currPuzzle[i].clone();
 
-            int temp = workingPuzzle[zero_loc_x][zero_loc_y];
-            workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y - 1];
-            workingPuzzle[zero_loc_x + 1][zero_loc_y - 1] = temp;
-            retArray.add(new Node(workingPuzzle, g + 3, h));
+                    int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                    workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y - 1];
+                    workingPuzzle[zero_loc_x + 1][zero_loc_y - 1] = temp;
+                    retArray.add(new Node(workingPuzzle, g + 3, h));
+                }
+            }
+        } else {
+            if (zero_loc_x >= 1) {  // Can move up
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y];
+                workingPuzzle[zero_loc_x - 1][zero_loc_y] = temp;
+                retArray.add(new Node(workingPuzzle, g + 1, h));
+            }
+            if (zero_loc_x < PUZZLE_SIZE - 1) {  // Can move down
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y];
+                workingPuzzle[zero_loc_x + 1][zero_loc_y] = temp;
+                retArray.add(new Node(workingPuzzle, g + 1, h));
+            }
+            if (zero_loc_y >= 1) {  // Can move left
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x][zero_loc_y - 1];
+                workingPuzzle[zero_loc_x][zero_loc_y - 1] = temp;
+                retArray.add(new Node(workingPuzzle, g + 1, h));
+            }
+            if (zero_loc_y < PUZZLE_SIZE - 1) {  // Can move right
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x][zero_loc_y + 1];
+                workingPuzzle[zero_loc_x][zero_loc_y + 1] = temp;
+                retArray.add(new Node(workingPuzzle, g + 1, h));
+            }
+            if (zero_loc_y < PUZZLE_SIZE - 1 && zero_loc_x >= 1) {  // Can move right and up
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y + 1];
+                workingPuzzle[zero_loc_x - 1][zero_loc_y + 1] = temp;
+                retArray.add(new Node(workingPuzzle, g + 3, h));
+            }
+
+            if (zero_loc_y < PUZZLE_SIZE - 1 && zero_loc_x < PUZZLE_SIZE - 1) {  // Can move right and down
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y + 1];
+                workingPuzzle[zero_loc_x + 1][zero_loc_y + 1] = temp;
+                retArray.add(new Node(workingPuzzle, g + 3, h));
+            }
+            if (zero_loc_y >= 1 && zero_loc_x >= 1) {  // Can move left and up
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x - 1][zero_loc_y - 1];
+                workingPuzzle[zero_loc_x - 1][zero_loc_y - 1] = temp;
+                retArray.add(new Node(workingPuzzle, g + 3, h));
+            }
+            if (zero_loc_y >= 1 && zero_loc_x < PUZZLE_SIZE - 1) {  // Can move left and down
+                // Clone currPuzzle to workingPuzzle
+                int[][] workingPuzzle = new int[currPuzzle.length][];
+                for (int i = 0; i < currPuzzle.length; i++)
+                    workingPuzzle[i] = currPuzzle[i].clone();
+
+                int temp = workingPuzzle[zero_loc_x][zero_loc_y];
+                workingPuzzle[zero_loc_x][zero_loc_y] = workingPuzzle[zero_loc_x + 1][zero_loc_y - 1];
+                workingPuzzle[zero_loc_x + 1][zero_loc_y - 1] = temp;
+                retArray.add(new Node(workingPuzzle, g + 3, h));
+            }
         }
         return retArray;
     }
@@ -312,5 +456,4 @@ public class PuzzleSolver {
             return (g + h);
         }
     }
-
 }
