@@ -30,9 +30,9 @@ public class PuzzleSolver {
             {10, 9, 8, 7}};
     private static int[][] puzzle2 = {{1, 3, 5, 4},
             {2, 13, 14, 15},
-            {11,12,9, 6},
+            {11, 12, 9, 6},
             {0, 10, 8, 7}};
-    private static int[][] puzzle3 = {{ 1,13, 3, 4},
+    private static int[][] puzzle3 = {{1, 13, 3, 4},
             {12, 11, 2, 5},
             {9, 8, 15, 7},
             {10, 6, 14, 0}};
@@ -42,6 +42,7 @@ public class PuzzleSolver {
     private int zeroLocX = -1;
     private int zeroLocY = -1;
     private Node solution;
+    private int cost;
 
 
     PuzzleSolver() {
@@ -63,8 +64,8 @@ public class PuzzleSolver {
             System.err.println("Please enter a correct algorithm: 1-4!");
             exit(1);
         } else {
-            //initalPuzzle = createPuzzle(depth).clone();
-            initalPuzzle = puzzle1.clone();
+            initalPuzzle = createPuzzle(depth).clone();
+//            initalPuzzle = puzzle1.clone();
 //            initalPuzzle = puzzle2.clone();
 //            initalPuzzle = puzzle3.clone();
             startTime = System.currentTimeMillis();
@@ -76,9 +77,10 @@ public class PuzzleSolver {
 
         if (returnVal == 0) {
             System.out.println("Solved!\n");
-            System.out.println("Number of nodes expanded: " + nodesExpanded);
-            System.out.println("Max queue size: " + maxQueueSize);
+            System.out.println("The number of expanded nodes : " + nodesExpanded);
+            System.out.println("Max frontier size : " + maxQueueSize);
             System.out.println("Time taken: " + (endTime - startTime) + "ms");
+            System.out.println("The cost of the solution : " + cost);
             printPath();
         } else if (returnVal == -1) {
             System.out.println("Error: Given input has no solution!");
@@ -101,6 +103,7 @@ public class PuzzleSolver {
                 printPuzzle(topState.getPuzzle());
                 frontier.remove();
                 if (nodesEqual(topState.getPuzzle(), goalState)) {
+                    cost = topState.getF();
                     solution = topState;
                     return 0;
                 } else {  // keep expanding
@@ -127,7 +130,6 @@ public class PuzzleSolver {
                         explored.clear();
                         frontier.add(new Node(puzzle, 0, 0, null));
                         explored.add(new Node(puzzle, 0, 0, null));
-                        nodesExpanded = 0;
                         maxQueueSize = 0;
                         continue;
                     }
@@ -145,6 +147,7 @@ public class PuzzleSolver {
                 printPuzzle(topState.getPuzzle());
                 frontier.remove();
                 if (nodesEqual(topState.getPuzzle(), goalState)) { // successs
+                    cost = topState.getF();
                     solution = topState;
                     return 0;
                 } else {  // keep expanding
@@ -288,58 +291,75 @@ public class PuzzleSolver {
 
     private int[][] createPuzzle(int depth) {
         int a;
-        ArrayList<int[][]> exploredPuzzle = new ArrayList<>();
         int[][] goal = goalState.clone();
+        ArrayList<int[][]> exploredStates = new ArrayList<int[][]>();
+        int last = 0;
         for (int i = 0; i < depth; i++) {
             a = (int) (Math.random() * 8);
             findZeroLoc(goal);
             switch (a) {
                 case 0:
-                    if (!Arrays.equals(goal, moveUp(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveUp(goal))) {
-                        exploredPuzzle.add(moveUp(goal));
+                    if (!Arrays.equals(goalState, moveUp(goal)) && !Arrays.equals(goal, moveUp(goal)) && last != 1 && !exploredStates.contains(moveUp(goal))) {
                         goal = moveUp(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("up");
+                        last = 0;
                     } else i--;
                     break;
                 case 1:
-                    if (!Arrays.equals(goal, moveDown(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveDown(goal))) {
-                        exploredPuzzle.add(moveDown(goal));
+                    if (!Arrays.equals(goalState, moveDown(goal)) && !Arrays.equals(goal, moveDown(goal)) && last != 0 && !exploredStates.contains(moveDown(goal))) {
                         goal = moveDown(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("down");
+                        last = 1;
                     } else i--;
                     break;
                 case 2:
-                    if (!Arrays.equals(goal, moveLeft(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveLeft(goal))) {
-                        exploredPuzzle.add(moveLeft(goal));
+                    if (!Arrays.equals(goalState, moveLeft(goal)) && !Arrays.equals(goal, moveLeft(goal)) && last != 3 && !exploredStates.contains(moveLeft(goal))) {
                         goal = moveLeft(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("left");
+                        last = 2;
                     } else i--;
                     break;
                 case 3:
-                    if (!Arrays.equals(goal, moveRight(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveRight(goal))) {
-                        exploredPuzzle.add(moveRight(goal));
+                    if (!Arrays.equals(goalState, moveRight(goal)) && !Arrays.equals(goal, moveRight(goal)) && last != 2 && !exploredStates.contains(moveRight(goal))) {
                         goal = moveRight(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("right");
+                        last = 3;
                     } else i--;
                     break;
                 case 4:
-                    if (!Arrays.equals(goal, moveUpLeft(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveUpLeft(goal))) {
-                        exploredPuzzle.add(moveUpLeft(goal));
+                    if (!Arrays.equals(goalState, moveUpLeft(goal)) && !Arrays.equals(goal, moveUpLeft(goal)) && last != 7 && !exploredStates.contains(moveUpLeft(goal))) {
                         goal = moveUpLeft(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("upleft");
+                        last = 4;
                     } else i--;
                     break;
                 case 5:
-                    if (!Arrays.equals(goal, moveDownLeft(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveDownLeft(goal))) {
-                        exploredPuzzle.add(moveDownLeft(goal));
+                    if (!Arrays.equals(goalState, moveDownLeft(goal)) && !Arrays.equals(goal, moveDownLeft(goal)) && last != 6 && !exploredStates.contains(moveDownLeft(goal))) {
                         goal = moveDownLeft(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("downleft");
+                        last = 5;
                     } else i--;
                     break;
                 case 6:
-                    if (!Arrays.equals(goal, moveUpRight(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveUpRight(goal))) {
-                        exploredPuzzle.add(moveUpRight(goal));
+                    if (!Arrays.equals(goalState, moveUpRight(goal)) && !Arrays.equals(goal, moveUpRight(goal)) && last != 5 && !exploredStates.contains(moveUpRight(goal))) {
                         goal = moveUpRight(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("upright");
+                        last = 6;
                     } else i--;
                     break;
                 case 7:
-                    if (!Arrays.equals(goal, moveDownRight(goal)) && !isExploredPuzzleContains(exploredPuzzle, moveDownRight(goal))) {
-                        exploredPuzzle.add(moveDownRight(goal));
+                    if (!Arrays.equals(goalState, moveDownRight(goal)) && !Arrays.equals(goal, moveDownRight(goal)) && last != 4 && !exploredStates.contains(moveDownRight(goal))) {
                         goal = moveDownRight(goal).clone();
+                        exploredStates.add(goal);
+                        System.out.println("downright");
+                        last = 7;
                     } else i--;
                     break;
                 default:
@@ -349,16 +369,6 @@ public class PuzzleSolver {
             }
         }
         return goal;
-    }
-
-    private boolean isExploredPuzzleContains(ArrayList<int[][]> explore, int[][] array) {
-        int[][] arrayInList;
-        for (int i = 0; i < explore.size(); i++) {
-            arrayInList = explore.get(i).clone();
-            if (Arrays.equals(array, arrayInList))
-                return true;
-        }
-        return false;
     }
 
     private void findZeroLoc(int[][] puzzle) {
@@ -494,14 +504,14 @@ public class PuzzleSolver {
     /* Determines whether the child passed in has previously been explored */
     private boolean containsChild(Node node) {
         int[][] child = node.getPuzzle();
-        for (Node state2 : explored) {
-            int[][] temp = state2.getPuzzle();
-            boolean identical = true;
+        for (Node node2 : explored) {
+            int[][] temp = node2.getPuzzle();
+            boolean statement = true;
             for (int i = 0; i < SIZE; i++)
                 for (int j = 0; j < SIZE; j++)
                     if (temp[i][j] != child[i][j])
-                        identical = false;
-            if (identical)
+                        statement = false;
+            if (statement)
                 return true;
         }
         return false;
@@ -517,13 +527,13 @@ public class PuzzleSolver {
     }
 
     /* Prints out current board state */
-    private void printPuzzle(int[][] currPuzzle) {
+    private void printPuzzle(int[][] puzzle) {
         for (int i = 0; i < SIZE; i++) {
             for (int j = 0; j < SIZE; j++) {
-                if (currPuzzle[i][j] < 10)
-                    System.out.print(currPuzzle[i][j] + "  ");
+                if (puzzle[i][j] < 10)
+                    System.out.print(puzzle[i][j] + "  ");
                 else
-                    System.out.print(currPuzzle[i][j] + " ");
+                    System.out.print(puzzle[i][j] + " ");
             }
             System.out.println();
         }
@@ -531,7 +541,7 @@ public class PuzzleSolver {
     }
 
     private void printPath() {
-        System.out.println("Solution Path : \n\n");
+        System.out.println("\nSolution Path : \n");
         Node parent = solution;
         pathOfSolution.add(new Node(goalState, 0, 0, null));
         while (parent.getParent() != null) {
