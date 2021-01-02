@@ -12,13 +12,15 @@ public class PuzzleSolver {
     private static final int ITERATIVE_LENGTHENING_SEARCH = 2;
     private static final int A_STAR_MISPLACED_TILE = 3;
     private static final int A_STAR_MANHATTAN = 4;
+    private static final int A_STAR_NEW_HEURISTIC = 5;
 
     private static int costLimit;
 
-    private static PriorityQueue<Node> frontier = new PriorityQueue<>(Comparator.comparing(Node::getF));  // Sort queue by f value
-    private static ArrayList<Node> explored = new ArrayList<>();  // previously explored states
+    private static PriorityQueue<Node> frontier = new PriorityQueue<>(Comparator.comparing(Node::getF));
+    private static ArrayList<Node> explored = new ArrayList<>();
     private static ArrayList<Node> pathOfSolution = new ArrayList<>();
     private int[][] initalPuzzle;
+    private int pathLength = 0;
 
     private static int[][] goalState = {{1, 2, 3, 4},
             {12, 13, 14, 5},
@@ -38,7 +40,7 @@ public class PuzzleSolver {
             {10, 6, 14, 0}};
 
     private static int nodesExpanded = 0;
-    private static int maxQueueSize = 1;
+    private static int maxFrontierSize = 1;
     private int zeroLocX = -1;
     private int zeroLocY = -1;
     private Node solution;
@@ -46,10 +48,6 @@ public class PuzzleSolver {
 
 
     PuzzleSolver() {
-        System.out.println("+=================================+");
-        System.out.println("|         15-Puzzle Solver         |");
-        System.out.println("|      PK ve İMÇ Gururla Sunar     |");
-        System.out.println("+=================================+\n");
         int returnVal = -1;
         int algorithm;
         int depth;
@@ -58,9 +56,10 @@ public class PuzzleSolver {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Please select a depth: ");
         depth = Integer.parseInt(scanner.nextLine());
+        pathLength = depth + 1;
         System.out.println("Please select a search algorithm: \n1) Uniform Cost Search \n2) Iterative Lengthening Search \n3) A* Misplaced Tile \n4) A* Manhattan  ");
         algorithm = Integer.parseInt(scanner.nextLine());
-        if (algorithm <= 0 || algorithm > 4) {
+        if (algorithm <= 0 || algorithm > 6) {
             System.err.println("Please enter a correct algorithm: 1-4!");
             exit(1);
         } else {
@@ -78,7 +77,7 @@ public class PuzzleSolver {
         if (returnVal == 0) {
             System.out.println("Solved!\n");
             System.out.println("The number of expanded nodes : " + nodesExpanded);
-            System.out.println("Max frontier size : " + maxQueueSize);
+            System.out.println("Max frontier size : " + maxFrontierSize);
             System.out.println("Time taken: " + (endTime - startTime) + "ms");
             System.out.println("The cost of the solution : " + cost);
             printPath();
@@ -106,22 +105,20 @@ public class PuzzleSolver {
                     cost = topState.getF();
                     solution = topState;
                     return 0;
-                } else {  // keep expanding
+                } else {
                     children = getChildren(topState, searchFunction);
                     System.out.println("There is " + children.size() + " children." + "\n");
                     if (children.size() == 0 && frontier.size() != 0) {
                         System.out.println("There is no child, continue.\n");
-                        continue;  // go to next node in queue if topNode has no descendants
+                        continue;
                     }
 
                     nodesExpanded++;
-//                System.out.println("Expanding top node in queue...");
                     for (Node child : children) {
-                        if (!containsChild(child)) {  // if unique state
+                        if (!containsChild(child)) {
                             frontier.add(child);
                             explored.add(child);
-                            if (frontier.size() > maxQueueSize) maxQueueSize = frontier.size();
-//                        System.out.println("Adding following child to queue:");
+                            if (frontier.size() > maxFrontierSize) maxFrontierSize = frontier.size();
                             printPuzzle(child.getPuzzle());
                         }
                     }
@@ -130,7 +127,7 @@ public class PuzzleSolver {
                         explored.clear();
                         frontier.add(new Node(puzzle, 0, 0, null));
                         explored.add(new Node(puzzle, 0, 0, null));
-                        maxQueueSize = 0;
+                        maxFrontierSize = 0;
                         continue;
                     }
                 }
@@ -139,32 +136,30 @@ public class PuzzleSolver {
                 ArrayList<Node> children;
                 Node tempState = frontier.peek();
                 int[][] tempNode = tempState.getPuzzle();
-                int[][] topNode = new int[puzzle.length][];  // clone top of stack
+                int[][] topNode = new int[puzzle.length][];
                 for (int i = 0; i < puzzle.length; i++)
                     topNode[i] = tempNode[i].clone();
                 Node topState = new Node(topNode, tempState.getG(), tempState.getH(), tempState.getParent());
                 System.out.println("Parent Node : g(n)=" + topState.getG() + "  h(n)=" + topState.getH() + "  f(n)=" + topState.getF() + "\n");
                 printPuzzle(topState.getPuzzle());
                 frontier.remove();
-                if (nodesEqual(topState.getPuzzle(), goalState)) { // successs
+                if (nodesEqual(topState.getPuzzle(), goalState)) {
                     cost = topState.getF();
                     solution = topState;
                     return 0;
-                } else {  // keep expanding
+                } else {
                     children = getChildren(topState, searchFunction);
                     System.out.println("There is " + children.size() + " children.\n");
                     if (children.size() == 0) {
                         System.out.println("There is no child, continue.\n");
-                        continue;  // go to next node in queue if topNode has no descendants
+                        continue;
                     }
                     nodesExpanded++;
-//                System.out.println("Expanding top node in queue...");
                     for (Node child : children) {
-                        if (!containsChild(child)) {  // if unique state
+                        if (!containsChild(child)) {
                             frontier.add(child);
                             explored.add(child);
-                            if (frontier.size() > maxQueueSize) maxQueueSize = frontier.size();
-//                        System.out.println("Adding following child to queue:");
+                            if (frontier.size() > maxFrontierSize) maxFrontierSize = frontier.size();
                             printPuzzle(child.getPuzzle());
                         }
                     }
@@ -173,8 +168,6 @@ public class PuzzleSolver {
         }
     }
 
-    /* Gets child nodes, does not handle parent state exception.
-     * returns children in move 0 lt, move 0 rt, move 0 up and mov 0 dn order */
     private ArrayList<Node> getChildren(Node currNode, int searchFunction) {
         ArrayList<Node> retArray = new ArrayList<>();
         int[][] puzzle = currNode.getPuzzle();
@@ -184,8 +177,6 @@ public class PuzzleSolver {
         int h = 0;
         switch (searchFunction) {
             case UNIFORM_COST_SEARCH:
-                h = 0;
-                break;
             case ITERATIVE_LENGTHENING_SEARCH:
                 h = 0;
                 break;
@@ -201,11 +192,24 @@ public class PuzzleSolver {
                     for (int j = 0; j < SIZE; j++) {
                         int target = puzzle[i][j];
                         for (int k = 0; k < SIZE; k++)
-                            for (int l = 0; l < SIZE; l++) { // Note: Deeply-nested for loop is not a bottle neck here due to SIZE limit
+                            for (int l = 0; l < SIZE; l++) {
                                 if (goalState[k][l] == target) {
                                     h += Math.abs(k - i) + Math.abs(l - j);
                                 }
                             }
+                    }
+                break;
+            case A_STAR_NEW_HEURISTIC:
+                for (int i = 0; i < SIZE; i++)
+                    for (int j = 0; j < SIZE; j++) {
+                        for (int k = 0; k < SIZE; k++) {
+                            if (puzzle[i][j] != goalState[i][k])
+                                h++;
+                            if (puzzle[i][j] != goalState[k][j])
+                                h++;
+                            if (puzzle[i][j] != goalState[i][j])
+                                h++;
+                        }
                     }
                 break;
             default:
@@ -548,8 +552,10 @@ public class PuzzleSolver {
             pathOfSolution.add(parent.getParent());
             parent = parent.getParent();
         }
+        int a = 0;
         for (int k = pathOfSolution.size() - 1; k >= 0; k--) {
             int[][] array = pathOfSolution.get(k).getPuzzle();
+            a++;
             for (int i = 0; i < SIZE; i++) {
                 for (int j = 0; j < SIZE; j++) {
                     if (array[i][j] < 10)
@@ -561,6 +567,8 @@ public class PuzzleSolver {
             }
             System.out.println();
         }
+        System.out.println("Path Length : " + a);
+
     }
 
 
