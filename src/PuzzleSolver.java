@@ -57,7 +57,7 @@ public class PuzzleSolver {
         System.out.println("Please select a depth: ");
         depth = Integer.parseInt(scanner.nextLine());
         pathLength = depth + 1;
-        System.out.println("Please select a search algorithm: \n1) Uniform Cost Search \n2) Iterative Lengthening Search \n3) A* Misplaced Tile \n4) A* Manhattan  ");
+        System.out.println("Please select a search algorithm: \n1) Uniform Cost Search \n2) Iterative Lengthening Search \n3) A* Misplaced Tile \n4) A* Manhattan \n5) A* New Heurisctic ");
         algorithm = Integer.parseInt(scanner.nextLine());
         if (algorithm <= 0 || algorithm > 6) {
             System.err.println("Please enter a correct algorithm: 1-4!");
