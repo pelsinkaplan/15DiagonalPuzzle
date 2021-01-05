@@ -1,10 +1,8 @@
 import java.util.*;
 
-import static java.lang.System.exit;
-
-public class PuzzleSolver {
+public class Main {
     public static void main(String[] args) {
-        new PuzzleSolver();
+        new Main();
     }
 
     private static final int SIZE = 4; // 15 puzzle has side length of 4. Can be changed for larger puzzles.
@@ -20,7 +18,6 @@ public class PuzzleSolver {
     private static ArrayList<Node> explored = new ArrayList<>();
     private static ArrayList<Node> pathOfSolution = new ArrayList<>();
     private int[][] initalPuzzle;
-    private int pathLength = 0;
 
     private static int[][] goalState = {{1, 2, 3, 4},
             {12, 13, 14, 5},
@@ -40,64 +37,57 @@ public class PuzzleSolver {
             {10, 6, 14, 0}};
 
     private static int nodesExpanded = 0;
-    private static int maxFrontierSize = 1;
+    private static int frontierSize = 1;
     private int zeroLocX = -1;
     private int zeroLocY = -1;
     private Node solution;
     private int cost;
 
 
-    PuzzleSolver() {
+    Main() {
         int returnVal = -1;
         int algorithm;
         int depth;
         long startTime = -1;
         long endTime = -1;
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Please select a depth: ");
+        System.out.println("Please enter a depth: ");
         depth = Integer.parseInt(scanner.nextLine());
-        pathLength = depth + 1;
         System.out.println("Please select a search algorithm: \n1) Uniform Cost Search \n2) Iterative Lengthening Search \n3) A* Misplaced Tile \n4) A* Manhattan \n5) A* New Heurisctic ");
         algorithm = Integer.parseInt(scanner.nextLine());
-        if (algorithm <= 0 || algorithm > 6) {
-            System.err.println("Please enter a correct algorithm: 1-4!");
-            exit(1);
-        } else {
-            initalPuzzle = createPuzzle(depth).clone();
+//        initalPuzzle = createPuzzle(depth).clone();
 //            initalPuzzle = puzzle1.clone();
-//            initalPuzzle = puzzle2.clone();
+            initalPuzzle = puzzle2.clone();
 //            initalPuzzle = puzzle3.clone();
-            startTime = System.currentTimeMillis();
-            System.out.println("Input state:");
-            printPuzzle(initalPuzzle);
-            returnVal = generalSearch(initalPuzzle, algorithm);
-        }
+        startTime = System.currentTimeMillis();
+        System.out.println("Input puzzle:");
+        printPuzzle(initalPuzzle);
+        returnVal = graphSearch(initalPuzzle, algorithm);
+
         endTime = System.currentTimeMillis();
 
         if (returnVal == 0) {
             System.out.println("Solved!\n");
             System.out.println("The number of expanded nodes : " + nodesExpanded);
-            System.out.println("Max frontier size : " + maxFrontierSize);
+            System.out.println("Max frontier size : " + frontierSize);
             System.out.println("Time taken: " + (endTime - startTime) + "ms");
             System.out.println("The cost of the solution : " + cost);
             printPath();
-        } else if (returnVal == -1) {
-            System.out.println("Error: Given input has no solution!");
         }
     }
 
-    private int generalSearch(int[][] puzzle, int searchFunction) {
+    private int graphSearch(int[][] puzzle, int searchFunction) {
         frontier.add(new Node(puzzle, 0, 0, null));
         explored.add(new Node(puzzle, 0, 0, null));
         while (true) {
             if (searchFunction == ITERATIVE_LENGTHENING_SEARCH) {
-                ArrayList<Node> children;
-                Node tempState = frontier.peek();
-                int[][] tempNode = tempState.getPuzzle();
+                ArrayList<Node> children = new ArrayList<>();
+                Node temp = frontier.peek();
+                int[][] tempNode = temp.getPuzzle();
                 int[][] topNode = new int[puzzle.length][];  // clone top of stack
                 for (int i = 0; i < puzzle.length; i++)
                     topNode[i] = tempNode[i].clone();
-                Node topState = new Node(topNode, tempState.getG(), tempState.getH(), tempState.parent);
+                Node topState = new Node(topNode, temp.getG(), temp.getH(), temp.parent);
                 System.out.println("\nParent Node : g(n)=" + topState.getG() + "  h(n)=" + topState.getH() + "  f(n)=" + topState.getF() + "\n");
                 printPuzzle(topState.getPuzzle());
                 frontier.remove();
@@ -118,7 +108,7 @@ public class PuzzleSolver {
                         if (!containsChild(child)) {
                             frontier.add(child);
                             explored.add(child);
-                            if (frontier.size() > maxFrontierSize) maxFrontierSize = frontier.size();
+                            if (frontier.size() > frontierSize) frontierSize = frontier.size();
                             printPuzzle(child.getPuzzle());
                         }
                     }
@@ -127,19 +117,18 @@ public class PuzzleSolver {
                         explored.clear();
                         frontier.add(new Node(puzzle, 0, 0, null));
                         explored.add(new Node(puzzle, 0, 0, null));
-                        maxFrontierSize = 0;
+                        frontierSize = 0;
                         continue;
                     }
                 }
             } else {
-                if (frontier.isEmpty()) return -1;
                 ArrayList<Node> children;
-                Node tempState = frontier.peek();
-                int[][] tempNode = tempState.getPuzzle();
+                Node temp = frontier.peek();
+                int[][] tempNode = temp.getPuzzle();
                 int[][] topNode = new int[puzzle.length][];
                 for (int i = 0; i < puzzle.length; i++)
                     topNode[i] = tempNode[i].clone();
-                Node topState = new Node(topNode, tempState.getG(), tempState.getH(), tempState.getParent());
+                Node topState = new Node(topNode, temp.getG(), temp.getH(), temp.getParent());
                 System.out.println("Parent Node : g(n)=" + topState.getG() + "  h(n)=" + topState.getH() + "  f(n)=" + topState.getF() + "\n");
                 printPuzzle(topState.getPuzzle());
                 frontier.remove();
@@ -159,7 +148,7 @@ public class PuzzleSolver {
                         if (!containsChild(child)) {
                             frontier.add(child);
                             explored.add(child);
-                            if (frontier.size() > maxFrontierSize) maxFrontierSize = frontier.size();
+                            if (frontier.size() > frontierSize) frontierSize = frontier.size();
                             printPuzzle(child.getPuzzle());
                         }
                     }
@@ -387,8 +376,7 @@ public class PuzzleSolver {
     }
 
     private int[][] moveUp(int[][] puzzle) {
-        if (zeroLocX >= 1) {  // Can move up
-            // Clone puzzle to updatedPuzzle
+        if (zeroLocX >= 1) {
             int[][] updatedPuzzle = new int[puzzle.length][];
             for (int i = 0; i < puzzle.length; i++)
                 updatedPuzzle[i] = puzzle[i].clone();
@@ -505,7 +493,6 @@ public class PuzzleSolver {
         return puzzle;
     }
 
-    /* Determines whether the child passed in has previously been explored */
     private boolean containsChild(Node node) {
         int[][] child = node.getPuzzle();
         for (Node node2 : explored) {
@@ -521,7 +508,6 @@ public class PuzzleSolver {
         return false;
     }
 
-    /* Determines whether two board layouts are identical */
     private boolean nodesEqual(int[][] puzzle1, int[][] puzzle2) {
         for (int i = 0; i < SIZE; i++)
             for (int j = 0; j < SIZE; j++)
@@ -530,7 +516,6 @@ public class PuzzleSolver {
         return true;
     }
 
-    /* Prints out current board state */
     private void printPuzzle(int[][] puzzle) {
         for (int i = 0; i < SIZE; i++) {
             for (int j = 0; j < SIZE; j++) {
@@ -570,7 +555,6 @@ public class PuzzleSolver {
         System.out.println("Path Length : " + a);
 
     }
-
 
     private static class Node {
         private int[][] puzzle;
