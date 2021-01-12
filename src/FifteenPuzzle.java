@@ -206,9 +206,12 @@ public class FifteenPuzzle {
                                 h++;
                             if (puzzle[i][j] != goalState[k][j])
                                 h++;
+                        }
+                        if (i == j || i == 3 - j || j == 3 - i) {
                             if (puzzle[i][j] != goalState[i][j])
                                 h++;
                         }
+
                     }
                 break;
             default:
